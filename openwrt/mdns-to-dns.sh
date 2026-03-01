@@ -30,7 +30,9 @@ mkdir -p "$HOSTS_DIR"
 
 # Filename for the custom hosts file
 HOSTS_FILE="${HOSTS_DIR}/${SCRIPT_NAME}.hosts"
-TMP_FILE="${HOSTS_DIR}/${SCRIPT_NAME}.tmp"
+# CHANGED: Temporary file now in /tmp/
+TMP_FILE="/tmp/${SCRIPT_NAME}.tmp"
+SORTED_TMP_FILE="/tmp/${SCRIPT_NAME}.sorted"
 
 # Initialize temporary file
 echo "# Auto-generated from umdns by $SCRIPT_NAME" > $TMP_FILE
@@ -86,18 +88,18 @@ fi
 
 # --- PART 3: Finalize and Check for Changes ---
 # Sort and create the new candidate file
-sort -u $TMP_FILE > "${TMP_FILE}.sorted"
+sort -u $TMP_FILE > "$SORTED_TMP_FILE"
 
 # Check if file exists and compare with the new sorted output
-if [ ! -f "$HOSTS_FILE" ] || ! cmp -s "$HOSTS_FILE" "${TMP_FILE}.sorted"; then
+if [ ! -f "$HOSTS_FILE" ] || ! cmp -s "$HOSTS_FILE" "$SORTED_TMP_FILE"; then
     logger -t "$0" "${LOG_MSG_PREFIX}mDNS Hosts: Changes detected. Updating $HOSTS_FILE and reloading dnsmasq."
-    mv "${TMP_FILE}.sorted" "$HOSTS_FILE"
+    mv "$SORTED_TMP_FILE" "$HOSTS_FILE"
     # FORCE DNSMASQ TO RELOAD HOSTS FILES
     /etc/init.d/dnsmasq reload
 else
     logger -t "$0" "${LOG_MSG_PREFIX}mDNS Hosts: No changes detected."
-    rm "${TMP_FILE}.sorted"
+    rm "$SORTED_TMP_FILE"
 fi
 
-# Remove the temporary files
+# Remove the temporary file
 rm $TMP_FILE
