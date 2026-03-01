@@ -1,7 +1,26 @@
 #!/bin/sh
 
-# Argument 1: Custom extension (e.g., "rl" for .rl)
-CUSTOM_EXT=$1
+# Default values
+LOG_PREFIX=""
+CUSTOM_EXT=""
+
+# --- Argument Parsing (Order Independent) ---
+for arg in "$@"; do
+  case $arg in
+    -prefix=*)
+      LOG_PREFIX="${arg#*=}"
+      ;;
+    -ext=*)
+      CUSTOM_EXT="${arg#*=}"
+      ;;
+  esac
+done
+
+# Prepare prefix for logger message
+LOG_MSG_PREFIX=""
+if [ -n "$LOG_PREFIX" ]; then
+    LOG_MSG_PREFIX="${LOG_PREFIX} - "
+fi
 
 # Dynamically set filenames based on the script name
 SCRIPT_NAME=$(basename "$0" .sh)
@@ -71,12 +90,12 @@ sort -u $TMP_FILE > "${TMP_FILE}.sorted"
 
 # Check if file exists and compare with the new sorted output
 if [ ! -f "$HOSTS_FILE" ] || ! cmp -s "$HOSTS_FILE" "${TMP_FILE}.sorted"; then
-    logger -t "$0" "mDNS Hosts: Changes detected. Updating $HOSTS_FILE and reloading dnsmasq."
+    logger -t "$0" "${LOG_MSG_PREFIX}mDNS Hosts: Changes detected. Updating $HOSTS_FILE and reloading dnsmasq."
     mv "${TMP_FILE}.sorted" "$HOSTS_FILE"
     # FORCE DNSMASQ TO RELOAD HOSTS FILES
     /etc/init.d/dnsmasq reload
 else
-    logger -t "$0" "mDNS Hosts: No changes detected."
+    logger -t "$0" "${LOG_MSG_PREFIX}mDNS Hosts: No changes detected."
     rm "${TMP_FILE}.sorted"
 fi
 
